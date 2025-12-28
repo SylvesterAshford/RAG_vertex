@@ -1,20 +1,9 @@
 import os
+import json
 import streamlit as st
 import vertexai
 from vertexai import rag
 from vertexai.generative_models import GenerativeModel, Tool
-from google.auth import default
-
-
-
-st.set_page_config(
-    page_title="RAG Chatbot",
-    page_icon="🤖",
-    layout="centered",
-)
-
-st.title("🤖 RAG Chatbot")
-st.caption("Powered by Vertex AI + Gemini")
 
 # =========================
 # CONFIGURATION
@@ -32,20 +21,22 @@ TOP_K = 3
 VECTOR_DISTANCE_THRESHOLD = 0.5
 
 # =========================
-# FORCE PROJECT
+# STREAMLIT CLOUD SECRET AUTH
 # =========================
-# os.environ["GOOGLE_CLOUD_PROJECT"] = PROJECT_ID
+# Load service account JSON from secrets
+sa_json = st.secrets["gcp"]["service_account"]
+sa_dict = json.loads(sa_json)
 
-# =========================
-# VERIFY AUTH
-# =========================
-# creds, active_project = default()
+# Save to a temporary file (required by Vertex AI)
+key_path = "/tmp/vertexai_sa.json"
+with open(key_path, "w") as f:
+    json.dump(sa_dict, f)
 
-# if active_project != PROJECT_ID:
-#     st.error(
-#         f"Wrong project context.\nExpected: {PROJECT_ID}\nGot: {active_project}"
-#     )
-#     st.stop()
+# Set environment variable for authentication
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = key_path
+
+# Force project
+os.environ["GOOGLE_CLOUD_PROJECT"] = PROJECT_ID
 
 # =========================
 # INIT VERTEX AI
@@ -59,20 +50,6 @@ rag_retrieval_config = rag.RagRetrievalConfig(
     top_k=TOP_K,
     filter=rag.Filter(vector_distance_threshold=VECTOR_DISTANCE_THRESHOLD),
 )
-
-# =========================
-# ACCESS CHECK (RUN ONCE)
-# =========================
-# @st.cache_resource
-# def check_rag_access():
-#     rag.retrieval_query(
-#         rag_resources=[rag.RagResource(rag_corpus=RAG_CORPUS_NAME)],
-#         text="Access check",
-#         rag_retrieval_config=rag.RagRetrievalConfig(top_k=1),
-#     )
-#     return True
-
-# check_rag_access()
 
 # =========================
 # RAG TOOL
@@ -116,21 +93,20 @@ user_input = st.chat_input("Ask a question about your documents...")
 
 if user_input:
     # Show user message
-    st.session_state.messages.append(
-        {"role": "user", "content": user_input}
-    )
+    st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
 
     # Generate response
     with st.chat_message("assistant"):
         with st.spinner("Thinking with RAG..."):
-            response = model.generate_content(user_input)
-            answer = response.text
+            try:
+                response = model.generate_content(user_input)
+                answer = response.text
+            except Exception as e:
+                answer = f"⚠️ Error generating response: {e}"
 
             st.markdown(answer)
 
     # Save assistant message
-    st.session_state.messages.append(
-        {"role": "assistant", "content": answer}
-    )
+    st.session_state.messages.append({"role": "assistant", "content": answer})
