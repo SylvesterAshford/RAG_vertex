@@ -34,18 +34,18 @@ VECTOR_DISTANCE_THRESHOLD = 0.5
 # =========================
 # FORCE PROJECT
 # =========================
-os.environ["GOOGLE_CLOUD_PROJECT"] = PROJECT_ID
+# os.environ["GOOGLE_CLOUD_PROJECT"] = PROJECT_ID
 
 # =========================
 # VERIFY AUTH
 # =========================
-creds, active_project = default()
+# creds, active_project = default()
 
-if active_project != PROJECT_ID:
-    st.error(
-        f"Wrong project context.\nExpected: {PROJECT_ID}\nGot: {active_project}"
-    )
-    st.stop()
+# if active_project != PROJECT_ID:
+#     st.error(
+#         f"Wrong project context.\nExpected: {PROJECT_ID}\nGot: {active_project}"
+#     )
+#     st.stop()
 
 # =========================
 # INIT VERTEX AI
@@ -63,16 +63,16 @@ rag_retrieval_config = rag.RagRetrievalConfig(
 # =========================
 # ACCESS CHECK (RUN ONCE)
 # =========================
-@st.cache_resource
-def check_rag_access():
-    rag.retrieval_query(
-        rag_resources=[rag.RagResource(rag_corpus=RAG_CORPUS_NAME)],
-        text="Access check",
-        rag_retrieval_config=rag.RagRetrievalConfig(top_k=1),
-    )
-    return True
+# @st.cache_resource
+# def check_rag_access():
+#     rag.retrieval_query(
+#         rag_resources=[rag.RagResource(rag_corpus=RAG_CORPUS_NAME)],
+#         text="Access check",
+#         rag_retrieval_config=rag.RagRetrievalConfig(top_k=1),
+#     )
+#     return True
 
-check_rag_access()
+# check_rag_access()
 
 # =========================
 # RAG TOOL
