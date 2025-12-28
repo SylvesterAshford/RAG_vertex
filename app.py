@@ -89,6 +89,7 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
 
 SYSTEM_PROMPT = """
+When a user asks "who are you", you should introduce yourself and what you can do.Don't give what in the document right away.
 You are an expert product manager and startup advisor. 
 Your job is to help participants of a venture-based hackathon 
 understand, analyze, and improve their app ideas.
