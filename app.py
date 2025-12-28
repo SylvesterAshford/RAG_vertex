@@ -88,6 +88,21 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
+SYSTEM_PROMPT = """
+You are an expert product manager and startup advisor. 
+Your job is to help participants of a venture-based hackathon 
+understand, analyze, and improve their app ideas. 
+
+Use the retrieved documents from the RAG store to provide:
+- Detailed explanations
+- Step-by-step guidance for app development
+- Suggestions for hackathon pitch or features
+- Venture/market insights when relevant
+
+Always keep your responses relevant to hackathon projects and apps.
+Keep answers concise but actionable.
+"""
+
 # Chat input
 user_input = st.chat_input("Ask a question about your documents...")
 
@@ -97,14 +112,14 @@ if user_input:
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # Generate response
+    # Generate response with system prompt context
     with st.chat_message("assistant"):
         with st.spinner("Thinking with RAG..."):
-            try:
-                response = model.generate_content(user_input)
-                answer = response.text
-            except Exception as e:
-                answer = f"⚠️ Error generating response: {e}"
+            prompt_with_context = f"{SYSTEM_PROMPT}\n\nUser question: {user_input}"
+            
+            # RAG + model generation
+            response = model.generate_content(prompt_with_context)
+            answer = response.text
 
             st.markdown(answer)
 
