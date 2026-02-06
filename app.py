@@ -1,11 +1,9 @@
 import streamlit as st
 import vertexai
-import os
 import json
 from google.oauth2 import service_account
 from vertexai.generative_models import GenerativeModel, Tool, Content, Part
 from vertexai.preview import rag
-from dotenv import load_dotenv
 
 # ==================================================
 # 1. SETUP UI (MUST BE FIRST)
@@ -82,7 +80,6 @@ st.markdown("<div class='app-title'>Olyster Mushroom Business Co-Engineer 🤖</
 # ==================================================
 # 2. CONFIGURATION (HARDCODED CORPUS)
 # ==================================================
-load_dotenv()
 
 PROJECT_ID = "gen-lang-client-0938066012"
 LOCATION = "asia-southeast1"
