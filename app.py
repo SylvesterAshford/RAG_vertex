@@ -1,6 +1,5 @@
 import streamlit as st
 from google import genai
-from google.genai import types
 
 # ==================================================
 # 1. SETUP UI
@@ -11,10 +10,10 @@ st.set_page_config(
     layout="centered"
 )
 
-# Replace with your API key
+# Replace with your AI Studio API key
 API_KEY = "AQ.Ab8RN6K7redysYm8EwTcervBSTriRWFLsXTpDtK5DuAZwFm0zw"
 
-# FIX: We DO NOT use vertexai=True here because you are using an AI Studio API Key.
+# Initialize AI Studio client
 client = genai.Client(api_key=API_KEY)
 MODEL_ID = "gemini-2.0-flash"
 
@@ -52,30 +51,23 @@ if prompt := st.chat_input("How can we scale your mushroom yield?"):
     with st.chat_message("assistant"):
         with st.spinner("Calculating..."):
             try:
-                # Format previous messages for the SDK
-                history_for_api = [
-                    types.Content(
-                        role="user" if m["role"] == "user" else "model",
-                        parts=[types.Part.from_text(text=m["content"])]
-                    ) for m in st.session_state.messages[:-1]
-                ]
+                # Build the conversation text for AI Studio
+                conversation_text = SYSTEM_PROMPT + "\n\n"
+                for m in st.session_state.messages:
+                    role_prefix = "User:" if m["role"] == "user" else "Assistant:"
+                    conversation_text += f"{role_prefix} {m['content']}\n"
 
-                # Create the chat session
-                chat = client.chats.create(
+                # Call AI Studio API
+                response = client.generate_text(
                     model=MODEL_ID,
-                    config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_PROMPT,
-                        temperature=0.7
-                    ),
-                    history=history_for_api
+                    prompt=conversation_text,
+                    temperature=0.7,
+                    max_output_tokens=500
                 )
-                
-                response = chat.send_message(prompt)
-                
+
                 # Show response and save to history
                 st.markdown(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
 
             except Exception as e:
-                # This will now catch any other issues
                 st.error(f"Chat Error: {e}")
