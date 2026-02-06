@@ -7,60 +7,55 @@ from vertexai.generative_models import GenerativeModel, Tool, Content, Part
 from vertexai.preview import rag
 from dotenv import load_dotenv
 
-# =========================
-# GLOBAL PAGE CONFIG
-# =========================
+# ==================================================
+# 1. SETUP UI (MUST BE FIRST)
+# ==================================================
 st.set_page_config(
     page_title="Gemini RAG Co‑Engineer",
     page_icon="🤖",
-    layout="wide",   # <<< makes it full width like ChatGPT
+    layout="wide"  # ChatGPT-style full width
 )
 
-# =========================
+# ==================================================
 # CUSTOM CSS (CHATGPT-LIKE UI)
-# =========================
+# ==================================================
 st.markdown("""
 <style>
-/* Remove Streamlit padding */
 .block-container {
     padding-top: 1rem;
-    padding-bottom: 0rem;
+    padding-bottom: 6rem;  /* space for fixed input */
     padding-left: 3rem;
     padding-right: 3rem;
     max-width: 1400px;
 }
 
-/* Chat container */
 .chat-container {
     max-width: 900px;
     margin: auto;
 }
 
-/* User bubble */
 .user-bubble {
     background: #2b2b2b;
     color: white;
     padding: 14px 18px;
     border-radius: 16px;
-    margin: 8px 0;
+    margin: 10px 0;
     max-width: 80%;
     float: right;
     clear: both;
 }
 
-/* Assistant bubble */
 .ai-bubble {
     background: #f3f4f6;
     color: #111;
     padding: 14px 18px;
     border-radius: 16px;
-    margin: 8px 0;
+    margin: 10px 0;
     max-width: 80%;
     float: left;
     clear: both;
 }
 
-/* Input box */
 .stChatInput {
     position: fixed;
     bottom: 0;
@@ -70,7 +65,6 @@ st.markdown("""
     border-top: 1px solid #ddd;
 }
 
-/* Title */
 .app-title {
     text-align: center;
     font-size: 2.2rem;
@@ -80,34 +74,39 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# =========================
+# ==================================================
 # HEADER
-# =========================
+# ==================================================
 st.markdown("<div class='app-title'>Olyster Mushroom Business Co‑Engineer 🤖</div>", unsafe_allow_html=True)
 
-# =========================
-# CONFIG
-# =========================
+# ==================================================
+# 2. CONFIGURATION
+# ==================================================
 load_dotenv()
 PROJECT_ID = os.getenv("PROJECT_ID")
 LOCATION = os.getenv("LOCATION")
 RAW_CORPUS_ID = os.getenv("CORPUS_ID")
 CORPUS_ID = f"projects/{PROJECT_ID}/locations/{LOCATION}/ragCorpora/{RAW_CORPUS_ID}"
 
-# =========================
-# AUTH
-# =========================
-raw_creds = st.secrets["gcp_service_account"]
-creds_info = dict(raw_creds) if not isinstance(raw_creds, str) else json.loads(raw_creds)
-if "private_key" in creds_info:
-    creds_info["private_key"] = creds_info["private_key"].strip().replace("\\n", "\n")
+# ==================================================
+# 3. AUTHENTICATION
+# ==================================================
+try:
+    raw_creds = st.secrets["gcp_service_account"]
+    creds_info = dict(raw_creds) if not isinstance(raw_creds, str) else json.loads(raw_creds)
 
-credentials = service_account.Credentials.from_service_account_info(creds_info)
-vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=credentials)
+    if "private_key" in creds_info:
+        creds_info["private_key"] = creds_info["private_key"].strip().replace("\\n", "\n")
 
-# =========================
-# RAG TOOL
-# =========================
+    credentials = service_account.Credentials.from_service_account_info(creds_info)
+    vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=credentials)
+except Exception as e:
+    st.error(f"❌ Auth Error: {e}")
+    st.stop()
+
+# ==================================================
+# 4. INITIALIZE RAG TOOL
+# ==================================================
 rag_retrieval_tool = Tool.from_retrieval(
     retrieval=rag.Retrieval(
         source=rag.VertexRagStore(
@@ -123,6 +122,17 @@ Language: ALWAYS respond in English.
 Style: sharp, peer-to-peer, collaborative.
 Mission Anchor:
 You operate inside the MyanSEED Studio.
+Your primary objective is to:
+- help farmers achieve stable yield and predictable income
+- help MyanSEED produce scalable, real entrepreneurship outcomes
+You must treat farming operations as a repeatable learning-and-software loop, not a one-off project.
+
+CORE BEHAVIOR:
+1. Do not ask generic questions like "What can I do for you?".
+2. Start from farmer needs.
+3. Identify real operational barriers.
+4. Propose low-risk, repeatable actions.
+5. Every response must end with a Pivot Question.
 """
 
 model = GenerativeModel(
@@ -131,15 +141,15 @@ model = GenerativeModel(
     system_instruction=GUIDED_SYSTEM_PROMPT
 )
 
-# =========================
-# STATE
-# =========================
+# ==================================================
+# 5. STATE
+# ==================================================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# =========================
-# CHAT DISPLAY
-# =========================
+# ==================================================
+# 6. CHAT DISPLAY (CHATGPT STYLE)
+# ==================================================
 st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
 
 for m in st.session_state.messages:
@@ -150,23 +160,27 @@ for m in st.session_state.messages:
 
 st.markdown("</div>", unsafe_allow_html=True)
 
-# =========================
-# INPUT
-# =========================
+# ==================================================
+# 7. INPUT
+# ==================================================
 prompt = st.chat_input("Ask your Co‑Engineer coach...")
 
 if prompt:
+    # store user msg
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     history = [
-        Content(role="user" if m["role"] == "user" else "model",
-                parts=[Part.from_text(m["content"])])
+        Content(
+            role="user" if m["role"] == "user" else "model",
+            parts=[Part.from_text(m["content"])]
+        )
         for m in st.session_state.messages[:-1]
     ]
 
     chat = model.start_chat(history=history)
     response = chat.send_message(prompt)
 
+    # store ai msg
     st.session_state.messages.append({"role": "assistant", "content": response.text})
 
     st.rerun()
