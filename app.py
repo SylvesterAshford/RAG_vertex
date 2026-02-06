@@ -10,93 +10,100 @@ from vertexai.preview import rag
 # ==================================================
 st.set_page_config(
     page_title="Gemini RAG Co-Engineer",
-    page_icon="🤖",
+    page_icon="🍄",
     layout="wide"
 )
 
 # ==================================================
-# CUSTOM CSS (CHATGPT-LIKE UI)
+# 2. RESPONSIVE CUSTOM CSS
 # ==================================================
 st.markdown("""
 <style>
-.block-container {
-    padding-top: 1rem;
-    padding-bottom: 6rem;
-    padding-left: 3rem;
-    padding-right: 3rem;
-    max-width: 1400px;
-}
+    /* Main container adjustment */
+    .main .block-container {
+        max-width: 100%;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
 
-.chat-container {
-    max-width: 900px;
-    margin: auto;
-}
+    /* Chat Area */
+    .chat-container {
+        width: 100%;
+        max-width: 800px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding-bottom: 120px; /* Space for the input box */
+    }
 
-.user-bubble {
-    background: #2b2b2b;
-    color: white;
-    padding: 14px 18px;
-    border-radius: 16px;
-    margin: 10px 0;
-    max-width: 80%;
-    float: right;
-    clear: both;
-}
+    /* Modern Bubbles */
+    .bubble {
+        padding: 14px 18px;
+        border-radius: 18px;
+        font-size: 16px;
+        line-height: 1.5;
+        max-width: 85%;
+        word-wrap: break-word;
+        font-family: 'Inter', sans-serif;
+    }
 
-.ai-bubble {
-    background: #f3f4f6;
-    color: #111;
-    padding: 14px 18px;
-    border-radius: 16px;
-    margin: 10px 0;
-    max-width: 80%;
-    float: left;
-    clear: both;
-}
+    .user-bubble {
+        background-color: #2b2b2b;
+        color: white;
+        align-self: flex-end;
+        border-bottom-right-radius: 4px;
+    }
 
-.stChatInput {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    background: white;
-    padding: 1rem;
-    border-top: 1px solid #ddd;
-}
+    .ai-bubble {
+        background-color: #f1f3f4;
+        color: #1a1a1a;
+        align-self: flex-start;
+        border-bottom-left-radius: 4px;
+        border: 1px solid #e0e0e0;
+    }
 
-.app-title {
-    text-align: center;
-    font-size: 2.2rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-}
+    .app-title {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        color: #1a1a1a;
+    }
+
+    /* Fix Streamlit's default chat input position */
+    div[data-testid="stChatInput"] {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 800px;
+        z-index: 1000;
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 640px) {
+        .bubble { max-width: 95%; font-size: 14px; }
+        .app-title { font-size: 1.4rem !important; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==================================================
-# HEADER
+# 3. CONFIGURATION & AUTH
 # ==================================================
-st.markdown("<div class='app-title'>Olyster Mushroom Business Co-Engineer 🤖</div>", unsafe_allow_html=True)
-
-# ==================================================
-# 2. CONFIGURATION (HARDCODED CORPUS)
-# ==================================================
-
 PROJECT_ID = "gen-lang-client-0938066012"
 LOCATION = "us-west1"
-
-# 🔥 HARDCODED NEW RAG CORPUS
 CORPUS_ID = "projects/gen-lang-client-0938066012/locations/us-west1/ragCorpora/2305843009213693952"
 
-# ==================================================
-# 3. AUTHENTICATION (STREAMLIT CLOUD READY)
-# ==================================================
 try:
     raw_creds = st.secrets["gcp"]["service_account"]
     creds_info = json.loads(raw_creds)
-
     if "private_key" in creds_info:
         creds_info["private_key"] = creds_info["private_key"].strip().replace("\\n", "\n")
-
+    
     credentials = service_account.Credentials.from_service_account_info(creds_info)
     vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=credentials)
 except Exception as e:
@@ -104,7 +111,7 @@ except Exception as e:
     st.stop()
 
 # ==================================================
-# 4. INITIALIZE RAG TOOL
+# 4. MODEL & RAG SETUP
 # ==================================================
 rag_retrieval_tool = Tool.from_retrieval(
     retrieval=rag.Retrieval(
@@ -119,20 +126,8 @@ GUIDED_SYSTEM_PROMPT = """
 Role: Guided Co-Engineering Coach (Agri Venture Studio).
 Language: ALWAYS respond in English.
 Style: sharp, peer-to-peer, collaborative.
-Mission Anchor:
-You operate inside the MyanSEED Studio.
-
-Your primary objective is to:
-- help farmers achieve stable yield and predictable income
-- help MyanSEED produce scalable, real entrepreneurship outcomes
-
-CORE BEHAVIOR:
-1. Do not ask generic questions like "What can I do for you?".
-2. Start from farmer needs.
-3. Identify real operational barriers.
-4. Propose low-risk, repeatable actions.
-5. Connect actions to measurable outcomes.
-6. Every response must end with a Pivot Question.
+Mission Anchor: You operate inside the MyanSEED Studio.
+Objective: Help farmers achieve stable yield and predictable income.
 """
 
 model = GenerativeModel(
@@ -142,45 +137,40 @@ model = GenerativeModel(
 )
 
 # ==================================================
-# 5. STATE
+# 5. UI CONTENT
 # ==================================================
+st.markdown("<div class='app-title'>Oyster Mushroom Business Co-Engineer 🤖</div>", unsafe_allow_html=True)
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ==================================================
-# 6. CHAT DISPLAY (CHATGPT STYLE)
-# ==================================================
+# Container for chat history
 st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
-
 for m in st.session_state.messages:
-    if m["role"] == "user":
-        st.markdown(f"<div class='user-bubble'>{m['content']}</div>", unsafe_allow_html=True)
-    else:
-        st.markdown(f"<div class='ai-bubble'>{m['content']}</div>", unsafe_allow_html=True)
-
+    role_class = "user-bubble" if m["role"] == "user" else "ai-bubble"
+    st.markdown(f"<div class='bubble {role_class}'>{m['content']}</div>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# ==================================================
-# 7. INPUT
-# ==================================================
+# Chat input
 prompt = st.chat_input("Ask your Co-Engineer coach...")
 
 if prompt:
-    # store user msg
+    # Append User Message
     st.session_state.messages.append({"role": "user", "content": prompt})
-
+    
+    # Prepare history for Gemini
     history = [
-        Content(
-            role="user" if m["role"] == "user" else "model",
-            parts=[Part.from_text(m["content"])]
-        )
+        Content(role="user" if m["role"] == "user" else "model", parts=[Part.from_text(m["content"])])
         for m in st.session_state.messages[:-1]
     ]
 
+    # Generate Response
     chat = model.start_chat(history=history)
-    response = chat.send_message(prompt)
-
-    # store ai msg
+    with st.spinner("Analyzing data..."):
+        response = chat.send_message(prompt)
+    
+    # Append AI Message
     st.session_state.messages.append({"role": "assistant", "content": response.text})
-
+    
+    # Refresh to show new messages
     st.rerun()
