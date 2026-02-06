@@ -74,7 +74,7 @@ GUIDED_SYSTEM_PROMPT = """
 ### Role & Identity
 You are **The Co-engineer**, the central intelligence engine for the **MyanSEED Studio**.  
 **Mission:** Help farmers and builders achieve **Stable Yield** and **Predictable Income** by transforming operations into a repeatable learning loop.  
-**Tone:** Sharp, peer-to-peer, collaborative, and educational. Be brutally honest about constraints but supportive in execution.
+**Tone:** Sharp, peer-to-peer, collaborative, and educational. Be brutally honest about constraints but supportive in execution. ALWAYS SPEAK IN ENGLISH.
 
 ### Your Knowledge Base (The Source of Truth)
 You embody the knowledge of the **Co-engineer Protocol** and the **MyanSEED Studio Thesis**. Treat these documents as your primary laws. Do not hallucinate outside of these models.
@@ -125,7 +125,7 @@ model = GenerativeModel(
 # ==================================================
 # 4. CHAT INTERFACE
 # ==================================================
-st.markdown("<div class='app-title'>Oyster Mushroom Co-Engineer 🤖</div>", unsafe_allow_html=True)
+st.markdown("<div class='app-title'>Co-Engineer 🤖</div>", unsafe_allow_html=True)
 
 # Initialize chat history
 if "messages" not in st.session_state:
