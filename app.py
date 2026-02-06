@@ -1,132 +1,172 @@
-import os
-import json
 import streamlit as st
 import vertexai
-from vertexai import rag
-from vertexai.generative_models import GenerativeModel, Tool
+import os
+import json
+from google.oauth2 import service_account
+from vertexai.generative_models import GenerativeModel, Tool, Content, Part
+from vertexai.preview import rag
+from dotenv import load_dotenv
 
 # =========================
-# CONFIGURATION
+# GLOBAL PAGE CONFIG
 # =========================
-PROJECT_ID = "gen-lang-client-0938066012"
-LOCATION = "us-west1"
-
-RAG_CORPUS_NAME = (
-    "projects/gen-lang-client-0938066012/"
-    "locations/us-west1/"
-    "ragCorpora/6917529027641081856"
+st.set_page_config(
+    page_title="Gemini RAG Co‑Engineer",
+    page_icon="🤖",
+    layout="wide",   # <<< makes it full width like ChatGPT
 )
 
-TOP_K = 3
-VECTOR_DISTANCE_THRESHOLD = 0.5
+# =========================
+# CUSTOM CSS (CHATGPT-LIKE UI)
+# =========================
+st.markdown("""
+<style>
+/* Remove Streamlit padding */
+.block-container {
+    padding-top: 1rem;
+    padding-bottom: 0rem;
+    padding-left: 3rem;
+    padding-right: 3rem;
+    max-width: 1400px;
+}
+
+/* Chat container */
+.chat-container {
+    max-width: 900px;
+    margin: auto;
+}
+
+/* User bubble */
+.user-bubble {
+    background: #2b2b2b;
+    color: white;
+    padding: 14px 18px;
+    border-radius: 16px;
+    margin: 8px 0;
+    max-width: 80%;
+    float: right;
+    clear: both;
+}
+
+/* Assistant bubble */
+.ai-bubble {
+    background: #f3f4f6;
+    color: #111;
+    padding: 14px 18px;
+    border-radius: 16px;
+    margin: 8px 0;
+    max-width: 80%;
+    float: left;
+    clear: both;
+}
+
+/* Input box */
+.stChatInput {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: white;
+    padding: 1rem;
+    border-top: 1px solid #ddd;
+}
+
+/* Title */
+.app-title {
+    text-align: center;
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # =========================
-# STREAMLIT CLOUD SECRET AUTH
+# HEADER
 # =========================
-# Load service account JSON from secrets
-sa_json = st.secrets["gcp"]["service_account"]
-sa_dict = json.loads(sa_json)
-
-# Save to a temporary file (required by Vertex AI)
-key_path = "/tmp/vertexai_sa.json"
-with open(key_path, "w") as f:
-    json.dump(sa_dict, f)
-
-# Set environment variable for authentication
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = key_path
-
-# Force project
-os.environ["GOOGLE_CLOUD_PROJECT"] = PROJECT_ID
+st.markdown("<div class='app-title'>Olyster Mushroom Business Co‑Engineer 🤖</div>", unsafe_allow_html=True)
 
 # =========================
-# INIT VERTEX AI
+# CONFIG
 # =========================
-vertexai.init(project=PROJECT_ID, location=LOCATION)
+load_dotenv()
+PROJECT_ID = os.getenv("PROJECT_ID")
+LOCATION = os.getenv("LOCATION")
+RAW_CORPUS_ID = os.getenv("CORPUS_ID")
+CORPUS_ID = f"projects/{PROJECT_ID}/locations/{LOCATION}/ragCorpora/{RAW_CORPUS_ID}"
 
 # =========================
-# RAG CONFIG
+# AUTH
 # =========================
-rag_retrieval_config = rag.RagRetrievalConfig(
-    top_k=TOP_K,
-    filter=rag.Filter(vector_distance_threshold=VECTOR_DISTANCE_THRESHOLD),
-)
+raw_creds = st.secrets["gcp_service_account"]
+creds_info = dict(raw_creds) if not isinstance(raw_creds, str) else json.loads(raw_creds)
+if "private_key" in creds_info:
+    creds_info["private_key"] = creds_info["private_key"].strip().replace("\\n", "\n")
+
+credentials = service_account.Credentials.from_service_account_info(creds_info)
+vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=credentials)
 
 # =========================
 # RAG TOOL
 # =========================
-rag_tool = Tool.from_retrieval(
+rag_retrieval_tool = Tool.from_retrieval(
     retrieval=rag.Retrieval(
         source=rag.VertexRagStore(
-            rag_resources=[rag.RagResource(rag_corpus=RAG_CORPUS_NAME)],
-            rag_retrieval_config=rag_retrieval_config,
-        )
+            rag_resources=[rag.RagResource(rag_corpus=CORPUS_ID)],
+            similarity_top_k=3,
+        ),
     )
 )
 
-# =========================
-# GEMINI MODEL
-# =========================
+GUIDED_SYSTEM_PROMPT = """
+Role: Guided Co-Engineering Coach (Agri Venture Studio).
+Language: ALWAYS respond in English.
+Style: sharp, peer-to-peer, collaborative.
+Mission Anchor:
+You operate inside the MyanSEED Studio.
+"""
+
 model = GenerativeModel(
-    model_name="gemini-2.0-flash-001",
-    tools=[rag_tool],
+    model_name="gemini-2.0-flash",
+    tools=[rag_retrieval_tool],
+    system_instruction=GUIDED_SYSTEM_PROMPT
 )
 
 # =========================
-# STREAMLIT UI
+# STATE
 # =========================
-st.set_page_config(page_title="Vertex AI RAG Chatbot", layout="centered")
-
-st.title("🤖 Vertex AI RAG Chatbot")
-st.caption("Powered by Gemini + Vertex AI RAG")
-
-# Session state for chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display chat history
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+# =========================
+# CHAT DISPLAY
+# =========================
+st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
 
-SYSTEM_PROMPT = """
-When a user asks "who are you" or something similar, you should introduce yourself and what you can do.Don't give what in the document right away.
-    -You are an expert product manager and startup advisor. 
-    -Your job is to help participants of a venture-based hackathon understand, analyze, and improve their app ideas.
-*Don't introduce who u are everytime a user asks a question, only when they ask "who are you" or similar because that's annoying.*
-*You should list all the ideas when a user asked about "what are the ideas or what are the apps" or something similar. Don't analyze when a user want to know just only how many.*
-You have apps ideas in the document provided.
-So when the user asks a question about "what do u have now", don't provide only one idea, you are a analyzer so provide multiple ideas and insights.
-You should introduce yourself as an expert product manager and startup advisor and what can you do.
+for m in st.session_state.messages:
+    if m["role"] == "user":
+        st.markdown(f"<div class='user-bubble'>{m['content']}</div>", unsafe_allow_html=True)
+    else:
+        st.markdown(f"<div class='ai-bubble'>{m['content']}</div>", unsafe_allow_html=True)
 
-Use the retrieved documents from the RAG store to provide:
-- Detailed explanations
-- Step-by-step guidance for app development
-- Suggestions for hackathon pitch or features
-- Venture/market insights when relevant
+st.markdown("</div>", unsafe_allow_html=True)
 
-Always keep your responses relevant to hackathon projects and apps.
-Keep answers concise but actionable.
-"""
+# =========================
+# INPUT
+# =========================
+prompt = st.chat_input("Ask your Co‑Engineer coach...")
 
-# Chat input
-user_input = st.chat_input("Ask a question about your documents...")
+if prompt:
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-if user_input:
-    # Show user message
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-        st.markdown(user_input)
+    history = [
+        Content(role="user" if m["role"] == "user" else "model",
+                parts=[Part.from_text(m["content"])])
+        for m in st.session_state.messages[:-1]
+    ]
 
-    # Generate response with system prompt context
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking with RAG..."):
-            prompt_with_context = f"{SYSTEM_PROMPT}\n\nUser question: {user_input}"
-            
-            # RAG + model generation
-            response = model.generate_content(prompt_with_context)
-            answer = response.text
+    chat = model.start_chat(history=history)
+    response = chat.send_message(prompt)
 
-            st.markdown(answer)
+    st.session_state.messages.append({"role": "assistant", "content": response.text})
 
-    # Save assistant message
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+    st.rerun()
