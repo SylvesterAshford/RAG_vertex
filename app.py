@@ -1,5 +1,6 @@
 import streamlit as st
 from google import genai
+from google.genai import types
 
 # ==================================================
 # 1. SETUP UI
@@ -10,16 +11,16 @@ st.set_page_config(
     layout="centered"
 )
 
-# Replace with your AI Studio API key
+# → Replace this with your Google AI Studio API Key
 API_KEY = "AQ.Ab8RN6K7redysYm8EwTcervBSTriRWFLsXTpDtK5DuAZwFm0zw"
 
-# Initialize AI Studio client
+# Initialize the client (ensure you installed google‑genai package)
 client = genai.Client(api_key=API_KEY)
+
+# Use a suitable Gemini model
 MODEL_ID = "gemini-2.0-flash"
 
-# ==================================================
-# 2. CHAT HISTORY & SYSTEM PROMPT
-# ==================================================
+# 🤖 System prompt for personality and instructions
 SYSTEM_PROMPT = """
 Role: Guided Co-Engineering Coach.
 Style: Sharp, peer-to-peer, collaborative. 
@@ -31,43 +32,45 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ==================================================
-# 3. CHAT INTERFACE (ChatGPT Style)
+# 2. CHAT INTERFACE
 # ==================================================
 st.title("Oyster Mushroom Co-Engineer 🍄")
 
-# Display historical messages
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+# Display history
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-# Handle new user input
-if prompt := st.chat_input("How can we scale your mushroom yield?"):
-    # Display user message
-    st.session_state.messages.append({"role": "user", "content": prompt})
+# New user input
+if user_input := st.chat_input("How can we scale your mushroom yield?"):
+    st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
-        st.markdown(prompt)
+        st.markdown(user_input)
 
-    # Generate assistant response
     with st.chat_message("assistant"):
-        with st.spinner("Calculating..."):
+        with st.spinner("Thinking..."):
             try:
-                # Build the conversation text for AI Studio
-                conversation_text = SYSTEM_PROMPT + "\n\n"
+                # Build conversation text
+                conversation = SYSTEM_PROMPT + "\n\n"
                 for m in st.session_state.messages:
-                    role_prefix = "User:" if m["role"] == "user" else "Assistant:"
-                    conversation_text += f"{role_prefix} {m['content']}\n"
+                    role = "User:" if m["role"] == "user" else "Assistant:"
+                    conversation += f"{role} {m['content']}\n"
 
-                # Call AI Studio API
-                response = client.generate_text(
+                # Call the Gemini API via generate_content
+                response = client.models.generate_content(
                     model=MODEL_ID,
-                    prompt=conversation_text,
-                    temperature=0.7,
-                    max_output_tokens=500
+                    contents=conversation,
+                    config=types.GenerateContentConfig(
+                        temperature=0.7,
+                        max_output_tokens=500
+                    ),
                 )
 
-                # Show response and save to history
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
+                assistant_text = response.text
+
+                # Show and save
+                st.markdown(assistant_text)
+                st.session_state.messages.append({"role": "assistant", "content": assistant_text})
 
             except Exception as e:
                 st.error(f"Chat Error: {e}")
