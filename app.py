@@ -11,9 +11,9 @@ from dotenv import load_dotenv
 # 1. SETUP UI (MUST BE FIRST)
 # ==================================================
 st.set_page_config(
-    page_title="Gemini RAG Co‑Engineer",
+    page_title="Gemini RAG Co-Engineer",
     page_icon="🤖",
-    layout="wide"  # ChatGPT-style full width
+    layout="wide"
 )
 
 # ==================================================
@@ -23,7 +23,7 @@ st.markdown("""
 <style>
 .block-container {
     padding-top: 1rem;
-    padding-bottom: 6rem;  /* space for fixed input */
+    padding-bottom: 6rem;
     padding-left: 3rem;
     padding-right: 3rem;
     max-width: 1400px;
@@ -77,23 +77,25 @@ st.markdown("""
 # ==================================================
 # HEADER
 # ==================================================
-st.markdown("<div class='app-title'>Olyster Mushroom Business Co‑Engineer 🤖</div>", unsafe_allow_html=True)
+st.markdown("<div class='app-title'>Olyster Mushroom Business Co-Engineer 🤖</div>", unsafe_allow_html=True)
 
 # ==================================================
-# 2. CONFIGURATION
+# 2. CONFIGURATION (HARDCODED CORPUS)
 # ==================================================
 load_dotenv()
-PROJECT_ID = os.getenv("PROJECT_ID")
-LOCATION = os.getenv("LOCATION")
-RAW_CORPUS_ID = os.getenv("CORPUS_ID")
-CORPUS_ID = f"projects/{PROJECT_ID}/locations/{LOCATION}/ragCorpora/{RAW_CORPUS_ID}"
+
+PROJECT_ID = "gen-lang-client-0938066012"
+LOCATION = "asia-southeast1"
+
+# 🔥 HARDCODED NEW RAG CORPUS
+CORPUS_ID = "projects/gen-lang-client-0938066012/locations/asia-southeast1/ragCorpora/6917529027641081856"
 
 # ==================================================
-# 3. AUTHENTICATION
+# 3. AUTHENTICATION (STREAMLIT CLOUD READY)
 # ==================================================
 try:
-    raw_creds = st.secrets["gcp_service_account"]
-    creds_info = dict(raw_creds) if not isinstance(raw_creds, str) else json.loads(raw_creds)
+    raw_creds = st.secrets["gcp"]["service_account"]
+    creds_info = json.loads(raw_creds)
 
     if "private_key" in creds_info:
         creds_info["private_key"] = creds_info["private_key"].strip().replace("\\n", "\n")
@@ -122,17 +124,18 @@ Language: ALWAYS respond in English.
 Style: sharp, peer-to-peer, collaborative.
 Mission Anchor:
 You operate inside the MyanSEED Studio.
+
 Your primary objective is to:
 - help farmers achieve stable yield and predictable income
 - help MyanSEED produce scalable, real entrepreneurship outcomes
-You must treat farming operations as a repeatable learning-and-software loop, not a one-off project.
 
 CORE BEHAVIOR:
 1. Do not ask generic questions like "What can I do for you?".
 2. Start from farmer needs.
 3. Identify real operational barriers.
 4. Propose low-risk, repeatable actions.
-5. Every response must end with a Pivot Question.
+5. Connect actions to measurable outcomes.
+6. Every response must end with a Pivot Question.
 """
 
 model = GenerativeModel(
@@ -163,7 +166,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 # ==================================================
 # 7. INPUT
 # ==================================================
-prompt = st.chat_input("Ask your Co‑Engineer coach...")
+prompt = st.chat_input("Ask your Co-Engineer coach...")
 
 if prompt:
     # store user msg
