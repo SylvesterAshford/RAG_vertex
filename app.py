@@ -82,10 +82,10 @@ st.markdown("<div class='app-title'>Olyster Mushroom Business Co-Engineer 🤖</
 # ==================================================
 
 PROJECT_ID = "gen-lang-client-0938066012"
-LOCATION = "asia-southeast1"
+LOCATION = "us-west1"
 
 # 🔥 HARDCODED NEW RAG CORPUS
-CORPUS_ID = "projects/gen-lang-client-0938066012/locations/asia-southeast1/ragCorpora/6917529027641081856"
+CORPUS_ID = "projects/gen-lang-client-0938066012/locations/us-west1/ragCorpora/2305843009213693952"
 
 # ==================================================
 # 3. AUTHENTICATION (STREAMLIT CLOUD READY)
