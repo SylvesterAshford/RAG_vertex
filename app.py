@@ -6,64 +6,24 @@ from vertexai.generative_models import GenerativeModel, Tool, Content, Part
 from vertexai.preview import rag
 
 # ==================================================
-# 1. SETUP UI (MUST BE FIRST)
+# 1. SETUP UI (STREAMLIT NATIVE CHAT)
 # ==================================================
 st.set_page_config(
     page_title="Gemini RAG Co-Engineer",
     page_icon="🍄",
-    layout="wide"
+    layout="centered"  # Centered layout feels more like ChatGPT
 )
 
-# ==================================================
-# 2. RESPONSIVE CUSTOM CSS
-# ==================================================
+# Custom CSS to refine the look and fix the header
 st.markdown("""
 <style>
-    /* Main container adjustment */
-    .main .block-container {
-        max-width: 100%;
-        padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    /* Chat Area */
-    .chat-container {
-        width: 100%;
+    /* Remove unnecessary padding at the top */
+    .block-container {
+        padding-top: 2rem;
         max-width: 800px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        padding-bottom: 120px; /* Space for the input box */
     }
-
-    /* Modern Bubbles */
-    .bubble {
-        padding: 14px 18px;
-        border-radius: 18px;
-        font-size: 16px;
-        line-height: 1.5;
-        max-width: 85%;
-        word-wrap: break-word;
-        font-family: 'Inter', sans-serif;
-    }
-
-    .user-bubble {
-        background-color: #2b2b2b;
-        color: white;
-        align-self: flex-end;
-        border-bottom-right-radius: 4px;
-    }
-
-    .ai-bubble {
-        background-color: #f1f3f4;
-        color: #1a1a1a;
-        align-self: flex-start;
-        border-bottom-left-radius: 4px;
-        border: 1px solid #e0e0e0;
-    }
-
+    
+    /* Make the title sticky or clean */
     .app-title {
         text-align: center;
         font-size: 2rem;
@@ -72,27 +32,15 @@ st.markdown("""
         color: #1a1a1a;
     }
 
-    /* Fix Streamlit's default chat input position */
+    /* Style the Chat Input to look cleaner */
     div[data-testid="stChatInput"] {
-        position: fixed;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 90%;
-        max-width: 800px;
-        z-index: 1000;
-    }
-
-    /* Mobile adjustments */
-    @media (max-width: 640px) {
-        .bubble { max-width: 95%; font-size: 14px; }
-        .app-title { font-size: 1.4rem !important; }
+        border-radius: 15px;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ==================================================
-# 3. CONFIGURATION & AUTH
+# 2. CONFIGURATION & AUTH
 # ==================================================
 PROJECT_ID = "gen-lang-client-0938066012"
 LOCATION = "us-west1"
@@ -111,7 +59,7 @@ except Exception as e:
     st.stop()
 
 # ==================================================
-# 4. MODEL & RAG SETUP
+# 3. MODEL & RAG SETUP
 # ==================================================
 rag_retrieval_tool = Tool.from_retrieval(
     retrieval=rag.Retrieval(
@@ -137,40 +85,40 @@ model = GenerativeModel(
 )
 
 # ==================================================
-# 5. UI CONTENT
+# 4. CHAT INTERFACE
 # ==================================================
-st.markdown("<div class='app-title'>Oyster Mushroom Business Co-Engineer 🤖</div>", unsafe_allow_html=True)
+st.markdown("<div class='app-title'>Oyster Mushroom Co-Engineer 🤖</div>", unsafe_allow_html=True)
 
+# Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Container for chat history
-st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
-for m in st.session_state.messages:
-    role_class = "user-bubble" if m["role"] == "user" else "ai-bubble"
-    st.markdown(f"<div class='bubble {role_class}'>{m['content']}</div>", unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)
+# Display chat messages from history on app rerun
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# Chat input
-prompt = st.chat_input("Ask your Co-Engineer coach...")
-
-if prompt:
-    # Append User Message
-    st.session_state.messages.append({"role": "user", "content": prompt})
+# React to user input
+if prompt := st.chat_input("Ask your Co-Engineer coach..."):
+    # Display user message in chat message container
+    with st.chat_message("user"):
+        st.markdown(prompt)
     
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
     # Prepare history for Gemini
     history = [
         Content(role="user" if m["role"] == "user" else "model", parts=[Part.from_text(m["content"])])
         for m in st.session_state.messages[:-1]
     ]
 
-    # Generate Response
-    chat = model.start_chat(history=history)
-    with st.spinner("Analyzing data..."):
-        response = chat.send_message(prompt)
-    
-    # Append AI Message
+    # Generate assistant response
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            chat = model.start_chat(history=history)
+            response = chat.send_message(prompt)
+            st.markdown(response.text)
+            
+    # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": response.text})
-    
-    # Refresh to show new messages
-    st.rerun()
