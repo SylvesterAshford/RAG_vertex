@@ -15,7 +15,7 @@ st.set_page_config(
 API_KEY = "AQ.Ab8RN6K7redysYm8EwTcervBSTriRWFLsXTpDtK5DuAZwFm0zw"
 
 # FIX: We DO NOT use vertexai=True here because you are using an AI Studio API Key.
-client = genai.Client("AQ.Ab8RN6K7redysYm8EwTcervBSTriRWFLsXTpDtK5DuAZwFm0zw")
+client = genai.Client(api_key=API_KEY)
 MODEL_ID = "gemini-2.0-flash"
 
 # ==================================================
