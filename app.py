@@ -5,61 +5,77 @@ from google.genai import types
 # ==================================================
 # 1. SETUP & AUTHENTICATION
 # ==================================================
-st.set_page_config(page_title="Gemini Chatbot", page_icon="🤖", layout="centered")
+st.set_page_config(
+    page_title="Gemini Co-Engineer",
+    page_icon="🤖",
+    layout="centered"
+)
 
-# Your provided API Key
+# Your API Key from Google AI Studio
 API_KEY = "AQ.Ab8RN6K7redysYm8EwTcervBSTriRWFLsXTpDtK5DuAZwFm0zw"
 
-# Initialize the Gemini Client using the SDK you shared
-# Note: For API key usage, we don't set vertexai=True
+# Initialize the Client for the Gemini Developer API (vertexai=False by default)
 client = genai.Client(api_key=API_KEY)
 MODEL_ID = "gemini-2.0-flash"
 
 # ==================================================
-# 2. CHAT HISTORY MANAGEMENT
+# 2. SYSTEM INSTRUCTIONS
 # ==================================================
+SYSTEM_PROMPT = """
+Role: Guided Co-Engineering Coach (Agri Venture Studio).
+Mission: Help farmers achieve stable yield and predictable income.
+Style: Sharp, peer-to-peer, collaborative. 
+Always end with a 'Pivot Question' to keep the conversation moving.
+"""
+
+# ==================================================
+# 3. CHAT HISTORY & UI
+# ==================================================
+st.title("Oyster Mushroom Co-Engineer 🍄")
+
+# Initialize chat history in session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ==================================================
-# 3. CHATGPT STYLE UI
-# ==================================================
-st.title("Gemini Pro Assistant 🤖")
-
-# Display previous messages from history
+# Display chat messages from history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# User input field
-if prompt := st.chat_input("What is on your mind?"):
-    # 1. Display User Message
+# User Input
+if prompt := st.chat_input("Ask your farming coach..."):
+    # 1. Add and display user message
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # 2. Generate Assistant Response
+    # 2. Generate and display assistant response
     with st.chat_message("assistant"):
-        with st.spinner("Gemini is thinking..."):
+        with st.spinner("Analyzing strategy..."):
             try:
-                # Convert session history to SDK format
-                history = [
+                # Format history for the SDK
+                history_parts = [
                     types.Content(
                         role="user" if m["role"] == "user" else "model",
                         parts=[types.Part.from_text(text=m["content"])]
                     ) for m in st.session_state.messages[:-1]
                 ]
 
-                # Start chat and send message
-                chat = client.chats.create(model=MODEL_ID, history=history)
+                # Start chat with system instruction and history
+                chat = client.chats.create(
+                    model=MODEL_ID,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_PROMPT,
+                        temperature=0.7
+                    ),
+                    history=history_parts
+                )
+                
                 response = chat.send_message(prompt)
-                
-                # Display response
                 full_response = response.text
-                st.markdown(full_response)
                 
-                # Save to history
+                st.markdown(full_response)
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
-            
+
             except Exception as e:
-                st.error(f"An error occurred: {str(e)}")
+                st.error(f"Chat Error: {e}")
